@@ -498,19 +498,29 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
 
-        .pronunciation-video-tools { margin: 14px auto 18px; padding: 12px; max-width: 760px; background: #f1f5f9; border: 1px solid #dbe3ee; border-radius: 12px; }
+        .pronunciation-video-tools { margin: 14px auto 18px; padding: 12px; max-width: 820px; background: #f1f5f9; border: 1px solid #dbe3ee; border-radius: 12px; }
         .pronunciation-video-label { margin-bottom: 8px; color: #475569; font-size: .9rem; font-weight: 700; }
         .pronunciation-video-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-        .pronunciation-video-button { padding: 8px 13px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
-        .pronunciation-video-button:hover { background: #1d4ed8; }
+        .pronunciation-video-button { padding: 8px 13px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font: inherit; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+        .pronunciation-video-button:hover { background: #1d4ed8; transform: translateY(-1px); }
         .pronunciation-video-button:focus-visible, .pronunciation-video-close:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
         .pronunciation-video-unavailable { align-self: center; padding: 7px 10px; border-radius: 8px; background: #e2e8f0; color: #64748b; font-size: .88rem; }
-        .pronunciation-video-panel { width: min(360px, 100%); margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #cbd5e1; border-radius: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, .10); }
+        .pronunciation-video-panel { width: min(760px, 100%); margin-top: 12px; padding: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 4px 14px rgba(15, 23, 42, .10); }
         .pronunciation-video-panel[hidden] { display: none; }
-        .pronunciation-video-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: #334155; font-size: .9rem; font-weight: 700; }
+        .pronunciation-video-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; color: #334155; font-size: .92rem; font-weight: 700; }
         .pronunciation-video-note { display: block; margin-top: 3px; color: #64748b; font-size: .78rem; font-weight: 400; }
         .pronunciation-video-close { flex: none; padding: 2px 8px; border: 0; border-radius: 6px; background: #e2e8f0; color: #334155; font-size: 1.2rem; cursor: pointer; }
+        .pronunciation-video-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+        .pronunciation-video-grid.single-view { grid-template-columns: 1fr; max-width: 380px; margin: 0 auto; }
+        .pronunciation-video-box { display: flex; flex-direction: column; gap: 6px; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .pronunciation-video-tag { font-size: .8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; width: fit-content; }
+        .pronunciation-video-tag-front { color: #1d4ed8; background: #eff6ff; }
+        .pronunciation-video-tag-side { color: #059669; background: #ecfdf5; }
         .pronunciation-video-player { display: block; width: 100%; aspect-ratio: 4 / 3; background: #0f172a; border-radius: 6px; object-fit: contain; }
+        @media (max-width: 560px) {
+            .pronunciation-video-grid { grid-template-columns: 1fr; gap: 10px; }
+            .pronunciation-video-panel { width: 100%; max-width: 380px; margin-left: auto; margin-right: auto; }
+        }
         @media (max-width: 480px) { .pronunciation-video-tools { margin: 10px 0 14px; padding: 10px; } .pronunciation-video-button { padding: 7px 10px; } }
 
         @media (max-width: 640px) {
@@ -547,8 +557,8 @@
             .pronunciation-video-tools { width: 100%; margin: 10px 0 14px; padding: 10px; }
             .pronunciation-video-buttons { gap: 7px; }
             .pronunciation-video-button { min-height: 44px; padding: 8px 11px; }
-            .pronunciation-video-panel { width: 100%; max-width: 360px; }
-            .pronunciation-video-player { max-height: 42vh; }
+            .pronunciation-video-panel { width: 100%; max-width: 100%; }
+            .pronunciation-video-player { max-height: 38vh; }
             .dict-overlay { padding: 14px; }
             .dict-box { width: min(100%, 360px); max-height: 86dvh; overflow-y: auto; padding: 20px; }
         }
@@ -594,27 +604,53 @@
     const slidesData = unitData.slidesData || [];
 
     const PRONUNCIATION_VIDEOS = {
-        'iː': { file: 'iː.mp4' }, 'ɪ': { file: 'ɪ.mp4' },
-        'uː': { file: 'uː.mp4' }, 'ʊ': { file: 'ʊ.mp4' },
-        'ɑː': { file: 'ɑ.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɑ/).' },
-        'ʌ': { file: 'ʌ.mp4' },
+        'iː': { file: 'iː.mp4', sideFile: 'iː-side.mp4' },
+        'ɪ': { file: 'ɪ.mp4', sideFile: 'ɪ-side.mp4' },
+        'uː': { file: 'uː.mp4', sideFile: 'uː-side.mp4' },
+        'ʊ': { file: 'ʊ.mp4', sideFile: 'ʊ-side.mp4' },
+        'ɑː': { file: 'ɑ.mp4', sideFile: 'ɑ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɑ/).' },
+        'ʌ': { file: 'ʌ.mp4', sideFile: 'ʌ-side.mp4' },
         'ɔː': { file: 'ɔ.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɔ/).' },
-        'e': { file: 'ɛ.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɛ/).' },
-        'æ': { file: 'æ.mp4' },
-        'ɜː': { file: 'ɝ.mp4', note: 'Clip gần tương ứng giọng Mỹ có âm /r/ (/ɝ/).' },
-        'ɪə': { file: 'ɪr.mp4', note: 'Clip gần tương ứng giọng Mỹ có âm /r/ (/ɪr/).' },
-        'eɪ': { file: 'eɪ.mp4' }, 'aɪ': { file: 'aɪ.mp4' },
-        'ɔɪ': { file: 'ɔɪ.mp4' }, 'əʊ': { file: 'oʊ.mp4', note: 'Clip gần tương ứng giọng Mỹ (/oʊ/).' },
-        'aʊ': { file: 'aʊ.mp4' },
-        'p': { file: 'p.mp4' }, 'b': { file: 'b.mp4' }, 't': { file: 't.mp4' }, 'd': { file: 'd.mp4' },
-        'k': { file: 'k.mp4' }, 'g': { file: 'g.mp4' }, 'ɡ': { file: 'g.mp4' },
-        'f': { file: 'f.mp4' }, 'v': { file: 'v.mp4' }, 's': { file: 's.mp4' }, 'z': { file: 'z.mp4' },
-        'θ': { file: 'θ.mp4' }, 'ð': { file: 'ð.mp4' }, 'ʃ': { file: 'ʃ.mp4' }, 'ʒ': { file: 'ʒ.mp4' },
-        'tʃ': { file: 'tʃ.mp4' }, 'dʒ': { file: 'dʒ.mp4' },
-        'm': { file: 'm.mp4' }, 'n': { file: 'n.mp4' }, 'ŋ': { file: 'ŋ.mp4' },
-        'h': { file: 'h.mp4' }, 'l': { file: 'l.mp4' },
-        'r': { file: 'ɹ.mp4', note: 'Clip tương ứng phát âm /r/ kiểu Mỹ (/ɹ/).' }, 'ɹ': { file: 'ɹ.mp4' },
-        'w': { file: 'w.mp4' }, 'j': { file: 'j.mp4' }
+        'e': { file: 'ɛ.mp4', sideFile: 'ɛ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɛ/).' },
+        'æ': { file: 'æ.mp4', sideFile: 'æ-side.mp4' },
+        'ɜː': { file: 'ɝ.mp4', sideFile: 'ɝ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ có âm /r/ (/ɝ/).' },
+        'ɪə': { file: 'ɪr.mp4', sideFile: 'ɪr-side.mp4', note: 'Clip gần tương ứng giọng Mỹ có âm /r/ (/ɪr/).' },
+        'eɪ': { file: 'eɪ.mp4', sideFile: 'eɪ-side.mp4' },
+        'aɪ': { file: 'aɪ.mp4', sideFile: 'aɪ-side.mp4' },
+        'ɔɪ': { file: 'ɔɪ.mp4', sideFile: 'ɔɪ-side.mp4' },
+        'əʊ': { file: 'oʊ.mp4', sideFile: 'oʊ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ (/oʊ/).' },
+        'aʊ': { file: 'aʊ.mp4', sideFile: 'aʊ-side.mp4' },
+        'p': { file: 'p.mp4', sideFile: 'p-side.mp4' },
+        'b': { file: 'b.mp4', sideFile: 'b-side.mp4' },
+        't': { file: 't.mp4', sideFile: 't-side.mp4' },
+        'd': { file: 'd.mp4', sideFile: 'd-side.mp4' },
+        'k': { file: 'k.mp4', sideFile: 'k-side.mp4' },
+        'g': { file: 'g.mp4', sideFile: 'g-side.mp4' },
+        'ɡ': { file: 'g.mp4', sideFile: 'g-side.mp4' },
+        'f': { file: 'f.mp4', sideFile: 'f-side.mp4' },
+        'v': { file: 'v.mp4', sideFile: 'v-side.mp4' },
+        's': { file: 's.mp4', sideFile: 's-side.mp4' },
+        'z': { file: 'z.mp4', sideFile: 'z-side.mp4' },
+        'θ': { file: 'θ.mp4', sideFile: 'θ-side.mp4' },
+        'ð': { file: 'ð.mp4', sideFile: 'ð-side.mp4' },
+        'ʃ': { file: 'ʃ.mp4', sideFile: 'ʃ-side.mp4' },
+        'ʒ': { file: 'ʒ.mp4', sideFile: 'ʒ-side.mp4' },
+        'tʃ': { file: 'tʃ.mp4', sideFile: 'tʃ-side.mp4' },
+        'dʒ': { file: 'dʒ.mp4', sideFile: 'dʒ-side.mp4' },
+        'm': { file: 'm.mp4', sideFile: 'm-side.mp4' },
+        'n': { file: 'n.mp4', sideFile: 'n-side.mp4' },
+        'ŋ': { file: 'ŋ.mp4', sideFile: 'ŋ-side.mp4' },
+        'h': { file: 'h.mp4', sideFile: 'h-side.mp4' },
+        'l': { file: 'l.mp4', sideFile: 'l-side.mp4' },
+        'r': { file: 'r.mp4', sideFile: 'r-side.mp4' },
+        'ɹ': { file: 'ɹ.mp4', sideFile: 'r-side.mp4', note: 'Clip tương ứng phát âm /r/ kiểu Mỹ (/ɹ/).' },
+        'w': { file: 'w.mp4', sideFile: 'w-side.mp4' },
+        'j': { file: 'j.mp4', sideFile: 'j-side.mp4' },
+        'kw': { file: 'kw.mp4', sideFile: 'kw-side.mp4' },
+        'sp': { file: 'sp.mp4', sideFile: 'sp-side.mp4' },
+        'ɑr': { file: 'ɑr.mp4', sideFile: 'ɑr-side.mp4' },
+        'ɔr': { file: 'ɔr.mp4', sideFile: 'ɔr-side.mp4' },
+        'θr': { file: 'θr.mp4', sideFile: 'θr-side.mp4' }
     };
 
     function normalizePronunciationIPA(ipa) {
@@ -646,11 +682,23 @@
             return `&lt;button type="button" class="pronunciation-video-button" data-pronunciation-ipa="${ipa}" title="Xem video phát âm /${ipa}/"&gt;▶ /${ipa}/&lt;/button&gt;`;
         }).join('');
         return `&lt;section class="pronunciation-video-tools"&gt;
-            &lt;div class="pronunciation-video-label"&gt;Video khẩu hình của âm trong bài&lt;/div&gt;
+            &lt;div class="pronunciation-video-label"&gt;Video khẩu hình của âm trong bài (Chính diện &amp; Góc nghiêng)&lt;/div&gt;
             &lt;div class="pronunciation-video-buttons"&gt;${buttons}&lt;/div&gt;
             &lt;div class="pronunciation-video-panel" hidden&gt;
-                &lt;div class="pronunciation-video-heading"&gt;&lt;span class="pronunciation-video-caption"&gt;&lt;/span&gt;&lt;button type="button" class="pronunciation-video-close" aria-label="Đóng video"&gt;×&lt;/button&gt;&lt;/div&gt;
-                &lt;video class="pronunciation-video-player" controls playsinline preload="metadata"&gt;&lt;/video&gt;
+                &lt;div class="pronunciation-video-heading"&gt;
+                    &lt;span class="pronunciation-video-caption"&gt;&lt;/span&gt;
+                    &lt;button type="button" class="pronunciation-video-close" aria-label="Đóng video"&gt;×&lt;/button&gt;
+                &lt;/div&gt;
+                &lt;div class="pronunciation-video-grid"&gt;
+                    &lt;div class="pronunciation-video-box front-box"&gt;
+                        &lt;div class="pronunciation-video-tag pronunciation-video-tag-front"&gt;👀 Góc chính diện (Front)&lt;/div&gt;
+                        &lt;video class="pronunciation-video-player front" controls playsinline preload="metadata"&gt;&lt;/video&gt;
+                    &lt;/div&gt;
+                    &lt;div class="pronunciation-video-box side-box"&gt;
+                        &lt;div class="pronunciation-video-tag pronunciation-video-tag-side"&gt;📐 Góc nghiêng (Side)&lt;/div&gt;
+                        &lt;video class="pronunciation-video-player side" controls playsinline preload="metadata"&gt;&lt;/video&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
             &lt;/div&gt;
         &lt;/section&gt;`;
     }
@@ -659,19 +707,42 @@
         const info = PRONUNCIATION_VIDEOS[ipa];
         if (!info) return;
         const panel = slideDiv.querySelector('.pronunciation-video-panel');
-        const video = panel.querySelector('.pronunciation-video-player');
+        const frontVideo = panel.querySelector('.pronunciation-video-player.front');
+        const sideVideo = panel.querySelector('.pronunciation-video-player.side');
+        const sideBox = panel.querySelector('.pronunciation-video-box.side-box');
+        const grid = panel.querySelector('.pronunciation-video-grid');
         const caption = panel.querySelector('.pronunciation-video-caption');
-        caption.textContent = `Video phát âm /${ipa}/`;
+
+        caption.textContent = `Video phát âm /${ipa}/` + (info.sideFile ? ' (Chính diện & Góc nghiêng)' : '');
         if (info.note) {
             const note = document.createElement('span');
             note.className = 'pronunciation-video-note';
             note.textContent = info.note;
             caption.appendChild(note);
         }
-        video.src = new URL(`41_am_don_MP4/${encodeURIComponent(info.file)}`, document.baseURI).href;
+
+        frontVideo.src = new URL(`41_am_don_MP4/${encodeURIComponent(info.file)}`, document.baseURI).href;
+        frontVideo.load();
+
+        if (info.sideFile) {
+            sideVideo.src = new URL(`41_am_don_MP4/${encodeURIComponent(info.sideFile)}`, document.baseURI).href;
+            sideVideo.muted = true;
+            sideVideo.load();
+            sideBox.style.display = 'flex';
+            grid.classList.remove('single-view');
+        } else {
+            sideVideo.pause();
+            sideVideo.removeAttribute('src');
+            sideVideo.load();
+            sideBox.style.display = 'none';
+            grid.classList.add('single-view');
+        }
+
         panel.hidden = false;
-        video.load();
-        video.play().catch(() =&gt; {});
+        frontVideo.play().catch(() =&gt; {});
+        if (info.sideFile) {
+            sideVideo.play().catch(() =&gt; {});
+        }
     }
 
 
@@ -770,13 +841,57 @@
             });
             const videoPanel = slideDiv.querySelector('.pronunciation-video-panel');
             if (videoPanel) {
+                const frontVideo = videoPanel.querySelector('.pronunciation-video-player.front');
+                const sideVideo = videoPanel.querySelector('.pronunciation-video-player.side');
+
                 videoPanel.querySelector('.pronunciation-video-close').addEventListener('click', () =&gt; {
-                    const video = videoPanel.querySelector('.pronunciation-video-player');
-                    video.pause();
-                    video.removeAttribute('src');
-                    video.load();
+                    if (frontVideo) {
+                        frontVideo.pause();
+                        frontVideo.removeAttribute('src');
+                        frontVideo.load();
+                    }
+                    if (sideVideo) {
+                        sideVideo.pause();
+                        sideVideo.removeAttribute('src');
+                        sideVideo.load();
+                    }
                     videoPanel.hidden = true;
                 });
+
+                if (frontVideo &amp;&amp; sideVideo) {
+                    frontVideo.addEventListener('play', () =&gt; {
+                        if (sideVideo.src &amp;&amp; sideVideo.paused) {
+                            sideVideo.currentTime = frontVideo.currentTime;
+                            sideVideo.play().catch(() =&gt; {});
+                        }
+                    });
+                    frontVideo.addEventListener('pause', () =&gt; {
+                        if (sideVideo.src &amp;&amp; !sideVideo.paused) {
+                            sideVideo.pause();
+                        }
+                    });
+                    frontVideo.addEventListener('seeked', () =&gt; {
+                        if (sideVideo.src) {
+                            sideVideo.currentTime = frontVideo.currentTime;
+                        }
+                    });
+                    frontVideo.addEventListener('ended', () =&gt; {
+                        if (sideVideo.src &amp;&amp; !sideVideo.paused) {
+                            sideVideo.pause();
+                        }
+                    });
+                    sideVideo.addEventListener('play', () =&gt; {
+                        if (frontVideo.src &amp;&amp; frontVideo.paused) {
+                            frontVideo.currentTime = sideVideo.currentTime;
+                            frontVideo.play().catch(() =&gt; {});
+                        }
+                    });
+                    sideVideo.addEventListener('pause', () =&gt; {
+                        if (frontVideo.src &amp;&amp; !frontVideo.paused) {
+                            frontVideo.pause();
+                        }
+                    });
+                }
             }
             stage.appendChild(slideDiv);
 
