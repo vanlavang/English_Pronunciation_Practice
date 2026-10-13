@@ -608,17 +608,21 @@
         'ɪ': { file: 'ɪ.mp4', sideFile: 'ɪ-side.mp4' },
         'uː': { file: 'uː.mp4', sideFile: 'uː-side.mp4' },
         'ʊ': { file: 'ʊ.mp4', sideFile: 'ʊ-side.mp4' },
-        'ɑː': { file: 'ɑ.mp4', sideFile: 'ɑ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɑ/).' },
+        'ɑː': { file: 'ɑ.mp4', sideFile: 'ɑ-side.mp4', note: 'Clip tương ứng giọng Mỹ (/ɑ/).' },
         'ʌ': { file: 'ʌ.mp4', sideFile: 'ʌ-side.mp4' },
         'ɔː': { file: 'ɔ.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɔ/).' },
-        'e': { file: 'ɛ.mp4', sideFile: 'ɛ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ (/ɛ/).' },
+        'ɒ': { file: 'ɑ.mp4', sideFile: 'ɑ-side.mp4', note: 'Trong giọng Mỹ, âm /ɒ/ phát âm tương ứng /ɑ/.' },
+        'e': { file: 'ɛ.mp4', sideFile: 'ɛ-side.mp4', note: 'Clip tương ứng giọng Mỹ (/ɛ/).' },
         'æ': { file: 'æ.mp4', sideFile: 'æ-side.mp4' },
-        'ɜː': { file: 'ɝ.mp4', sideFile: 'ɝ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ có âm /r/ (/ɝ/).' },
-        'ɪə': { file: 'ɪr.mp4', sideFile: 'ɪr-side.mp4', note: 'Clip gần tương ứng giọng Mỹ có âm /r/ (/ɪr/).' },
+        'ɜː': { file: 'ɝ.mp4', sideFile: 'ɝ-side.mp4', note: 'Clip tương ứng giọng Mỹ có âm /r/ (/ɝ/).' },
+        'ə': { file: 'ʌ.mp4', sideFile: 'ʌ-side.mp4', note: 'Clip khẩu hình âm thả lỏng trung tính gần tương ứng (/ʌ/).' },
+        'ɪə': { file: 'ɪr.mp4', sideFile: 'ɪr-side.mp4', note: 'Clip tương ứng giọng Mỹ có âm /r/ (/ɪr/).' },
+        'eə': { file: 'ɛ.mp4', sideFile: 'ɛ-side.mp4', note: 'Clip tương ứng nguyên âm /ɛ/ trong giọng Mỹ.' },
+        'ʊə': { file: 'ʊ.mp4', sideFile: 'ʊ-side.mp4', note: 'Clip tương ứng nguyên âm /ʊ/ trong giọng Mỹ.' },
         'eɪ': { file: 'eɪ.mp4', sideFile: 'eɪ-side.mp4' },
         'aɪ': { file: 'aɪ.mp4', sideFile: 'aɪ-side.mp4' },
         'ɔɪ': { file: 'ɔɪ.mp4', sideFile: 'ɔɪ-side.mp4' },
-        'əʊ': { file: 'oʊ.mp4', sideFile: 'oʊ-side.mp4', note: 'Clip gần tương ứng giọng Mỹ (/oʊ/).' },
+        'əʊ': { file: 'oʊ.mp4', sideFile: 'oʊ-side.mp4', note: 'Clip tương ứng giọng Mỹ (/oʊ/).' },
         'aʊ': { file: 'aʊ.mp4', sideFile: 'aʊ-side.mp4' },
         'p': { file: 'p.mp4', sideFile: 'p-side.mp4' },
         'b': { file: 'b.mp4', sideFile: 'b-side.mp4' },
@@ -703,6 +707,21 @@
         &lt;/section&gt;`;
     }
 
+    function resolveMediaUrl(filename) {
+        if (!filename) return '';
+        const encoded = encodeURIComponent(filename);
+        const rel = '41_am_don_MP4/' + encoded;
+        try {
+            const base = (window.parent &amp;&amp; window.parent.location &amp;&amp; window.parent.location.href)
+                ? window.parent.location.href
+                : document.baseURI;
+            if (base &amp;&amp; !base.startsWith('about:')) {
+                return new URL(rel, base).href;
+            }
+        } catch (e) {}
+        return rel;
+    }
+
     function openPronunciationVideo(slideDiv, ipa) {
         const info = PRONUNCIATION_VIDEOS[ipa];
         if (!info) return;
@@ -721,11 +740,11 @@
             caption.appendChild(note);
         }
 
-        frontVideo.src = new URL(`41_am_don_MP4/${encodeURIComponent(info.file)}`, document.baseURI).href;
+        frontVideo.src = resolveMediaUrl(info.file);
         frontVideo.load();
 
         if (info.sideFile) {
-            sideVideo.src = new URL(`41_am_don_MP4/${encodeURIComponent(info.sideFile)}`, document.baseURI).href;
+            sideVideo.src = resolveMediaUrl(info.sideFile);
             sideVideo.muted = true;
             sideVideo.load();
             sideBox.style.display = 'flex';
@@ -1821,6 +1840,11 @@
             code = code.split('__UNIT_TITLE__').join(unit.title);
             code = code.split('__COL1_IPA__').join(unit.col1_ipa);
             code = code.split('__COL2_IPA__').join(unit.col2_ipa);
+
+            // Ensure base URI exists for relative assets inside srcdoc
+            if (window.location && window.location.href && !code.includes('<base ')) {
+                code = code.replace('<head>', '<head>\n    <base href="' + window.location.href + '">');
+            }
 
             frame.srcdoc = code;
         }
