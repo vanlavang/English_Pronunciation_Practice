@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Giao diện đồ họa (GUI) tự động cắt audio thành 13 câu tiếng Anh riêng biệt.
-Sử dụng Tkinter chuẩn của Python kết hợp FFmpeg và FFplay.
+Giao diện đồ họa (GUI) tự động cắt audio thành các câu tiếng Anh riêng biệt.
+Hỗ trợ Bài 1 (13 câu) & Bài 2 (12 câu), sử dụng Tkinter chuẩn kết hợp FFmpeg.
 
 Tác giả: Antigravity AI Pair Programmer
 """
@@ -15,51 +15,43 @@ import subprocess
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-# Import logic và hằng số từ cut_audio_sentences
 try:
     from cut_audio_sentences import (
-        SENTENCES_TEXT,
-        SENTENCES_AUTHORS,
-        TIMINGS_FULL,
-        TIMINGS_QUOTE_ONLY,
+        LESSONS_DATA,
         find_ffmpeg_executable,
         find_ffplay_executable,
+        detect_audio_for_lesson,
         detect_input_audio,
-        cut_single_sentence,
-        export_all_sentences,
-        get_sentence_configs
+        guess_lesson_from_filename,
+        get_sentence_configs,
+        export_all_sentences
     )
 except ImportError:
-    # Fallback nếu chạy độc lập
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from cut_audio_sentences import (
-        SENTENCES_TEXT,
-        SENTENCES_AUTHORS,
-        TIMINGS_FULL,
-        TIMINGS_QUOTE_ONLY,
+        LESSONS_DATA,
         find_ffmpeg_executable,
         find_ffplay_executable,
+        detect_audio_for_lesson,
         detect_input_audio,
-        cut_single_sentence,
-        export_all_sentences,
-        get_sentence_configs
+        guess_lesson_from_filename,
+        get_sentence_configs,
+        export_all_sentences
     )
 
 class AudioCutterGUI(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("✂️ Cắt Audio Thành 13 Câu Tiếng Anh - Master Pronunciation")
+        self.title("✂️ Cắt Audio Theo Câu Tiếng Anh - Master Pronunciation")
         self.geometry("980x720")
         self.minsize(860, 600)
-
-        # Cấu hình màu sắc hiện đại
         self.configure(bg="#f1f5f9")
 
         self.ffmpeg_bin = find_ffmpeg_executable()
         self.ffplay_bin = find_ffplay_executable()
         self.playing_proc = None
 
-        # Dữ liệu 13 câu
+        self.lesson_var = tk.IntVar(value=1)
         self.profile_var = tk.StringVar(value="full")
         self.input_audio_var = tk.StringVar()
         self.output_dir_var = tk.StringVar(value=os.path.abspath(os.path.join("sounds", "cut_sentences")))
@@ -67,8 +59,9 @@ class AudioCutterGUI(tk.Tk):
         detected = detect_input_audio()
         if detected:
             self.input_audio_var.set(detected)
+            self.lesson_var.set(guess_lesson_from_filename(detected))
 
-        self.items = get_sentence_configs(profile=self.profile_var.get())
+        self.items = get_sentence_configs(lesson_num=self.lesson_var.get(), profile=self.profile_var.get())
 
         self.create_widgets()
         self.update_table()
@@ -80,7 +73,7 @@ class AudioCutterGUI(tk.Tk):
         
         lbl_title = tk.Label(
             header_frame,
-            text="🎧 CẮT FILE AUDIO THÀNH 13 CÂU TIẾNG ANH RIÊNG BIỆT",
+            text="🎧 CẮT FILE AUDIO THÀNH TỪNG CÂU TIẾNG ANH (FFMPEG AUTO CUTTER)",
             font=("Segoe UI", 14, "bold"),
             fg="white",
             bg="#2563eb"
@@ -89,7 +82,7 @@ class AudioCutterGUI(tk.Tk):
 
         lbl_sub = tk.Label(
             header_frame,
-            text="Tự động nhận diện khoảng lặng, đệm padding chống mất âm, xuất chuẩn tên '4 BAI 1-1.mp3' -> '4 BAI 1-13.mp3'",
+            text="Hỗ trợ Bài 1 (13 câu) & Bài 2 (12 câu) | Tự động phân tích khoảng lặng | Đệm padding chống mất âm",
             font=("Segoe UI", 9),
             fg="#bfdbfe",
             bg="#2563eb"
@@ -101,41 +94,58 @@ class AudioCutterGUI(tk.Tk):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # 1. File I/O Settings
-        io_frame = tk.LabelFrame(main_frame, text=" 📂 Cấu hình File & Thư mục ", font=("Segoe UI", 10, "bold"), bg="#ffffff", padx=12, pady=8)
+        io_frame = tk.LabelFrame(main_frame, text=" 📂 Cấu hình File & Bài học ", font=("Segoe UI", 10, "bold"), bg="#ffffff", padx=12, pady=8)
         io_frame.pack(fill=tk.X, pady=(0, 10))
 
+        # Chọn bài học
+        tk.Label(io_frame, text="Chọn bài học:", font=("Segoe UI", 9, "bold"), bg="#ffffff").grid(row=0, column=0, sticky="w", pady=4)
+        lesson_selector_frame = tk.Frame(io_frame, bg="#ffffff")
+        lesson_selector_frame.grid(row=0, column=1, sticky="w", padx=8, pady=4)
+
+        for l_num, l_cfg in LESSONS_DATA.items():
+            rb_l = tk.Radiobutton(
+                lesson_selector_frame,
+                text=l_cfg["title"],
+                variable=self.lesson_var,
+                value=l_num,
+                command=self.on_lesson_change,
+                bg="#ffffff",
+                font=("Segoe UI", 9, "bold" if l_num == 1 else "normal")
+            )
+            rb_l.pack(side=tk.LEFT, padx=8)
+
         # Input audio
-        tk.Label(io_frame, text="File audio nguồn:", font=("Segoe UI", 9, "bold"), bg="#ffffff").grid(row=0, column=0, sticky="w", pady=4)
+        tk.Label(io_frame, text="File audio nguồn:", font=("Segoe UI", 9, "bold"), bg="#ffffff").grid(row=1, column=0, sticky="w", pady=4)
         entry_input = tk.Entry(io_frame, textvariable=self.input_audio_var, font=("Segoe UI", 9), width=70)
-        entry_input.grid(row=0, column=1, sticky="ew", padx=8, pady=4)
+        entry_input.grid(row=1, column=1, sticky="ew", padx=8, pady=4)
         btn_browse_in = tk.Button(io_frame, text="Chọn file...", command=self.browse_input_audio, bg="#e2e8f0", relief="groove")
-        btn_browse_in.grid(row=0, column=2, pady=4)
+        btn_browse_in.grid(row=1, column=2, pady=4)
 
         # Output dir
-        tk.Label(io_frame, text="Thư mục xuất file:", font=("Segoe UI", 9, "bold"), bg="#ffffff").grid(row=1, column=0, sticky="w", pady=4)
+        tk.Label(io_frame, text="Thư mục xuất file:", font=("Segoe UI", 9, "bold"), bg="#ffffff").grid(row=2, column=0, sticky="w", pady=4)
         entry_output = tk.Entry(io_frame, textvariable=self.output_dir_var, font=("Segoe UI", 9), width=70)
-        entry_output.grid(row=1, column=1, sticky="ew", padx=8, pady=4)
+        entry_output.grid(row=2, column=1, sticky="ew", padx=8, pady=4)
         btn_browse_out = tk.Button(io_frame, text="Chọn thư mục...", command=self.browse_output_dir, bg="#e2e8f0", relief="groove")
-        btn_browse_out.grid(row=1, column=2, pady=4)
+        btn_browse_out.grid(row=2, column=2, pady=4)
 
         # Profile selection
         profile_frame = tk.Frame(io_frame, bg="#ffffff")
-        profile_frame.grid(row=2, column=0, columnspan=3, sticky="w", pady=(6, 2))
+        profile_frame.grid(row=3, column=0, columnspan=3, sticky="w", pady=(6, 2))
         tk.Label(profile_frame, text="Chế độ cắt:", font=("Segoe UI", 9, "bold"), bg="#ffffff").pack(side=tk.LEFT, padx=(0, 10))
         
-        rb1 = tk.Radiobutton(profile_frame, text="Đầy đủ (câu trích dẫn + tên tác giả đọc ở cuối)", variable=self.profile_var, value="full", command=self.on_profile_change, bg="#ffffff")
+        rb1 = tk.Radiobutton(profile_frame, text="Đầy đủ (câu + tên tác giả nếu có)", variable=self.profile_var, value="full", command=self.on_profile_change, bg="#ffffff")
         rb1.pack(side=tk.LEFT, padx=6)
-        rb2 = tk.Radiobutton(profile_frame, text="Chỉ câu nói (bỏ qua tên tác giả đọc ở cuối câu 8, 11, 12)", variable=self.profile_var, value="quote_only", command=self.on_profile_change, bg="#ffffff")
+        rb2 = tk.Radiobutton(profile_frame, text="Chỉ câu nói (bỏ qua tên tác giả đọc ở cuối)", variable=self.profile_var, value="quote_only", command=self.on_profile_change, bg="#ffffff")
         rb2.pack(side=tk.LEFT, padx=6)
 
         io_frame.columnconfigure(1, weight=1)
 
-        # 2. Table of 13 sentences
-        table_frame = tk.LabelFrame(main_frame, text=" 📋 Danh sách 13 câu & Điểm cắt dự kiến ", font=("Segoe UI", 10, "bold"), bg="#ffffff", padx=10, pady=8)
+        # 2. Table of sentences
+        table_frame = tk.LabelFrame(main_frame, text=" 📋 Danh sách các câu & Điểm cắt dự kiến ", font=("Segoe UI", 10, "bold"), bg="#ffffff", padx=10, pady=8)
         table_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         cols = ("stt", "filename", "start", "end", "duration", "text")
-        self.tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=13)
+        self.tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=12)
         self.tree.heading("stt", text="STT")
         self.tree.heading("filename", text="Tên file đích")
         self.tree.heading("start", text="Bắt đầu (s)")
@@ -144,7 +154,7 @@ class AudioCutterGUI(tk.Tk):
         self.tree.heading("text", text="Nội dung câu tiếng Anh đối chiếu")
 
         self.tree.column("stt", width=45, anchor="center")
-        self.tree.column("filename", width=110, anchor="w")
+        self.tree.column("filename", width=120, anchor="w")
         self.tree.column("start", width=80, anchor="center")
         self.tree.column("end", width=80, anchor="center")
         self.tree.column("duration", width=90, anchor="center")
@@ -164,13 +174,13 @@ class AudioCutterGUI(tk.Tk):
         btn_play = tk.Button(bar_frame, text="🔊 Nghe thử câu chọn", font=("Segoe UI", 9, "bold"), bg="#0284c7", fg="white", padx=10, pady=5, relief="flat", command=self.play_selected)
         btn_play.pack(side=tk.LEFT, padx=(0, 6))
 
-        btn_stop = tk.Button(bar_frame, text="⏹ Dừng nghe", font=("Segoe UI", 9), bg="#e2e8f0", padx=8, pady=5, relief="flat", command=self.stop_audio)
+        btn_stop = tk.Button(bar_frame, text="⏹ Dừng", font=("Segoe UI", 9), bg="#e2e8f0", padx=8, pady=5, relief="flat", command=self.stop_audio)
         btn_stop.pack(side=tk.LEFT, padx=(0, 6))
 
-        btn_edit = tk.Button(bar_frame, text="✏️ Sửa thời gian câu chọn", font=("Segoe UI", 9), bg="#f8fafc", relief="groove", padx=8, pady=5, command=self.edit_selected)
+        btn_edit = tk.Button(bar_frame, text="✏️ Sửa thời gian", font=("Segoe UI", 9), bg="#f8fafc", relief="groove", padx=8, pady=5, command=self.edit_selected)
         btn_edit.pack(side=tk.LEFT, padx=(0, 6))
 
-        btn_reset = tk.Button(bar_frame, text="🔄 Đặt lại mặc định", font=("Segoe UI", 9), bg="#f8fafc", relief="groove", padx=8, pady=5, command=self.reset_timings)
+        btn_reset = tk.Button(bar_frame, text="🔄 Đặt lại", font=("Segoe UI", 9), bg="#f8fafc", relief="groove", padx=8, pady=5, command=self.reset_timings)
         btn_reset.pack(side=tk.LEFT, padx=(0, 6))
 
         btn_save = tk.Button(bar_frame, text="💾 Lưu JSON", font=("Segoe UI", 9), bg="#f8fafc", relief="groove", padx=8, pady=5, command=self.export_config_json)
@@ -182,7 +192,7 @@ class AudioCutterGUI(tk.Tk):
         # Big Cut Action Button
         btn_cut_all = tk.Button(
             bar_frame,
-            text="✂️ TỰ ĐỘNG CẮT 13 CÂU NGAY",
+            text="✂️ TỰ ĐỘNG CẮT CÁC CÂU NGAY",
             font=("Segoe UI", 10, "bold"),
             bg="#16a34a",
             fg="white",
@@ -206,15 +216,24 @@ class AudioCutterGUI(tk.Tk):
         )
         btn_open_folder.pack(side=tk.RIGHT, padx=6)
 
-        # 4. Status and Progress Bar
+        # 4. Status Bar
         status_frame = tk.Frame(self, bg="#e2e8f0", padx=12, pady=6)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
         self.progress_bar = ttk.Progressbar(status_frame, orient="horizontal", mode="determinate")
         self.progress_bar.pack(side=tk.RIGHT, padx=8, ipadx=50)
 
-        self.lbl_status = tk.Label(status_frame, text="Sẵn sàng. Chọn câu rồi bấm 'Nghe thử' hoặc bấm 'TỰ ĐỘNG CẮT 13 CÂU'.", font=("Segoe UI", 9), bg="#e2e8f0", fg="#334155")
+        self.lbl_status = tk.Label(status_frame, text="Sẵn sàng.", font=("Segoe UI", 9), bg="#e2e8f0", fg="#334155")
         self.lbl_status.pack(side=tk.LEFT)
+
+    def on_lesson_change(self):
+        l_num = self.lesson_var.get()
+        auto_file = detect_audio_for_lesson(l_num)
+        if auto_file:
+            self.input_audio_var.set(auto_file)
+        self.items = get_sentence_configs(lesson_num=l_num, profile=self.profile_var.get())
+        self.update_table()
+        self.lbl_status.config(text=f"Đã chuyển sang Bài {l_num} ({len(self.items)} câu).")
 
     def browse_input_audio(self):
         f = filedialog.askopenfilename(
@@ -223,17 +242,20 @@ class AudioCutterGUI(tk.Tk):
         )
         if f:
             self.input_audio_var.set(os.path.abspath(f))
-            self.lbl_status.config(text=f"Đã chọn file nguồn: {os.path.basename(f)}")
+            guessed = guess_lesson_from_filename(f)
+            self.lesson_var.set(guessed)
+            self.items = get_sentence_configs(lesson_num=guessed, profile=self.profile_var.get())
+            self.update_table()
+            self.lbl_status.config(text=f"Đã chọn file: {os.path.basename(f)} (Nhận diện Bài {guessed})")
 
     def browse_output_dir(self):
-        d = filedialog.askdirectory(title="Chọn thư mục xuất 13 file")
+        d = filedialog.askdirectory(title="Chọn thư mục xuất file")
         if d:
             self.output_dir_var.set(os.path.abspath(d))
 
     def on_profile_change(self):
-        self.items = get_sentence_configs(profile=self.profile_var.get())
+        self.items = get_sentence_configs(lesson_num=self.lesson_var.get(), profile=self.profile_var.get())
         self.update_table()
-        self.lbl_status.config(text=f"Đã chuyển sang profile: {'Đầy đủ (gồm tác giả)' if self.profile_var.get() == 'full' else 'Chỉ câu nói'}")
 
     def reset_timings(self):
         self.on_profile_change()
@@ -277,7 +299,6 @@ class AudioCutterGUI(tk.Tk):
 
         item = self.items[idx]
         self.stop_audio()
-
         duration = item['end'] - item['start']
         self.lbl_status.config(text=f"🔊 Đang phát câu {item['index']}: {item['start']:.2f}s -> {item['end']:.2f}s...")
 
@@ -299,12 +320,10 @@ class AudioCutterGUI(tk.Tk):
 
     def stop_audio(self):
         if self.playing_proc and self.playing_proc.poll() is None:
-            try:
-                self.playing_proc.terminate()
-            except Exception:
-                pass
+            try: self.playing_proc.terminate()
+            except Exception: pass
             self.playing_proc = None
-            self.lbl_status.config(text="Đã dừng phát audio.")
+            self.lbl_status.config(text="Đã dừng phát.")
 
     def on_double_click_item(self, event):
         self.edit_selected()
@@ -316,8 +335,6 @@ class AudioCutterGUI(tk.Tk):
             return
 
         item = self.items[idx]
-        
-        # Dialog sửa thời gian
         dlg = tk.Toplevel(self)
         dlg.title(f"Chỉnh sửa câu {item['index']}")
         dlg.geometry("450x260")
@@ -398,7 +415,7 @@ class AudioCutterGUI(tk.Tk):
                 with open(f, "r", encoding="utf-8") as fp:
                     self.items = json.load(fp)
                 self.update_table()
-                messagebox.showinfo("Thành công", "Đã nạp cấu hình điểm cắt thành công!")
+                messagebox.showinfo("Thành công", "Đã nạp cấu hình thành công!")
             except Exception as ex:
                 messagebox.showerror("Lỗi", f"Không thể đọc file JSON:\n{ex}")
 
@@ -415,31 +432,30 @@ class AudioCutterGUI(tk.Tk):
             return
 
         output_dir = self.output_dir_var.get()
-        if not output_dir:
-            messagebox.showerror("Lỗi", "Vui lòng chọn thư mục xuất file!")
-            return
-
         self.progress_bar["value"] = 0
         self.progress_bar["maximum"] = len(self.items)
 
         def _worker():
-            self.lbl_status.config(text="⏳ Đang tiến hành cắt 13 câu bằng FFmpeg...")
+            self.lbl_status.config(text=f"⏳ Đang cắt {len(self.items)} câu bằng FFmpeg...")
+            l_num = self.lesson_var.get()
+            rep_name = f"cut_report_bai{l_num}.txt" if l_num != 1 else "cut_report.txt"
             success_files, report_file = export_all_sentences(
                 audio_file,
                 output_dir,
                 self.items,
-                self.ffmpeg_bin
+                self.ffmpeg_bin,
+                report_filename=rep_name
             )
 
             self.progress_bar["value"] = len(self.items)
             if len(success_files) == len(self.items):
                 msg = f"🎉 XUẤT THÀNH CÔNG ĐỦ {len(self.items)} FILE!\n\nThư mục:\n{output_dir}\n\nĐã tạo báo cáo:\n{os.path.basename(report_file)}"
-                self.lbl_status.config(text="✓ Đã cắt xong toàn bộ 13 file thành công!")
+                self.lbl_status.config(text="✓ Đã cắt xong toàn bộ câu thành công!")
                 if messagebox.askyesno("Hoàn tất", f"{msg}\n\nBạn có muốn mở thư mục kết quả ngay bây giờ không?"):
                     self.open_output_folder()
             else:
                 self.lbl_status.config(text=f"[!] Cảnh báo: Chỉ xuất được {len(success_files)}/{len(self.items)} file.")
-                messagebox.showwarning("Cảnh báo", f"Chỉ tạo được {len(success_files)}/{len(self.items)} file. Vui lòng kiểm tra báo cáo tại:\n{report_file}")
+                messagebox.showwarning("Cảnh báo", f"Chỉ tạo được {len(success_files)}/{len(self.items)} file.")
 
         threading.Thread(target=_worker, daemon=True).start()
 
