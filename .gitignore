@@ -1,5 +1,2 @@
-﻿__pycache__/
-*.py[cod]
-*.tmp
-*.bak
-temp_*
+# Audio working directory (WIP - chua hoan thien)
+sounds/
